@@ -55,8 +55,8 @@
   <script>
     const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmZTVkZWJkZC1lMDdlLTQyYzMtYWIyNS01YmUzZTc4Y2JmMGIiLCJpZCI6MzkyOTEzLCJpYXQiOjE3NzE3MzAzNjh9.lNWe3qqelAGSjQAMwJv8jrHbdxKFmFYq7UB80y4O6CU';
     
-    // State
-    const state = { lon: 103.9915, lat: 1.3644, alt: 500, heading: 90 };
+    // State - Start on ground at Singapore Changi Airport
+    const state = { lon: 103.9915, lat: 1.3644, alt: 15, heading: 90 };
     const keys = {};
     
     // Input
@@ -114,19 +114,48 @@
       document.getElementById('cesium-container').style.width = '100vw';
       document.getElementById('cesium-container').style.height = '100vh';
       
-      // Aircraft
+      // Aircraft - Larger model, on ground
       const aircraft = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
-        model: { uri: 'https://cesium.com/public/Sandcastle/SampleData/models/CesiumAir/Cesium_Air.glb', scale: 50 },
-        label: { text: '✈️ F-16', font: '24px sans-serif', fillColor: Cesium.Color.YELLOW, pixelOffset: new Cesium.Cartesian2(0, -60) },
-        point: { pixelSize: 15, color: Cesium.Color.RED }
+        model: { 
+          uri: 'https://cesium.com/public/Sandcastle/SampleData/models/CesiumAir/Cesium_Air.glb', 
+          scale: 80,
+          minimumPixelSize: 64
+        },
+        label: { 
+          text: '✈️ F-16', 
+          font: '28px sans-serif', 
+          fillColor: Cesium.Color.YELLOW, 
+          pixelOffset: new Cesium.Cartesian2(0, -80),
+          showBackground: true,
+          backgroundColor: new Cesium.Color(0,0,0,0.7)
+        },
+        point: {
+          pixelSize: 20,
+          color: Cesium.Color.RED,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 2
+        }
       });
+      
+      console.log('Aircraft added, waiting for model...');
       
       // Airport
       viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(103.9915, 1.3644, 0),
         point: { pixelSize: 12, color: Cesium.Color.CYAN },
         label: { text: '🛫 Singapore', font: '16px sans-serif' }
+      });
+      
+      // Fly camera to start - closer to ground
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(state.lon, state.lat - 0.001, state.alt + 100),
+        orientation: {
+          heading: Cesium.Math.toRadians(0),
+          pitch: Cesium.Math.toRadians(-10),
+          roll: 0
+        },
+        duration: 0
       });
       
       document.getElementById('loading').classList.add('hidden');
