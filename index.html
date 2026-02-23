@@ -4,22 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Flight Simulator - M0</title>
-  <!-- Try multiple Cesium CDNs -->
+  <!-- Try UNPKG Cesium -->
   <script>
     window.CESIUM_CDNS = [
-      'https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/cesium/1.114.0/Cesium.js',
-      'https://cesiumjs.org/releases/1.114/Build/Cesium/Cesium.js'
+      'https://unpkg.com/cesium@1.114.0/Build/Cesium/Cesium.js',
+      'https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Cesium.js',
+      'https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js'
     ];
     window.CESIUM_CSS = [
-      'https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css',
-      'https://cdnjs.cloudflare.com/ajax/libs/cesium/1.114.0/Widgets/widgets.css'
+      'https://unpkg.com/cesium@1.114.0/Build/Cesium/Widgets/widgets.css',
+      'https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Widgets/widgets.css',
+      'https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css'
     ];
     
     async function loadCesium() {
       for (let i = 0; i < window.CESIUM_CDNS.length; i++) {
         try {
-          document.getElementById('loading-text').textContent = 'Loading Cesium CDN ' + (i+1) + '...';
+          document.getElementById('loading-text').textContent = 'Trying CDN ' + (i+1) + '...';
           await new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = window.CESIUM_CDNS[i];
@@ -34,13 +35,12 @@
           link.href = window.CESIUM_CSS[i];
           document.head.appendChild(link);
           
-          console.log('Cesium loaded from CDN ' + (i+1));
           return true;
         } catch(e) {
-          console.warn('CDN ' + (i+1) + ' failed:', e);
+          console.warn('CDN ' + (i+1) + ' failed');
         }
       }
-      throw new Error('All Cesium CDNs failed');
+      throw new Error('All CDNs failed');
     }
   </script>
   <style>
