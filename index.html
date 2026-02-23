@@ -46,47 +46,121 @@
     <div>POS: <span id="pos">--</span></div>
     <div>HDG: <span id="hdg">--</span>°</div>
     <div>ALT: <span id="alt">--</span> m</div>
+    <div>SPD: <span id="spd">--</span> m/s</div>
+    <div>THR: <span id="thr">--</span>%</div>
   </div>
   
   <div class="controls">
-    WASD = Move | Arrow = Turn | Q/E = Up/Down
+    W/S = Throttle | A/D = Roll | Arrow = Pitch/Turn | Q/E = Alt
   </div>
 
   <script>
     const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmZTVkZWJkZC1lMDdlLTQyYzMtYWIyNS01YmUzZTc4Y2JmMGIiLCJpZCI6MzkyOTEzLCJpYXQiOjE3NzE3MzAzNjh9.lNWe3qqelAGSjQAMwJv8jrHbdxKFmFYq7UB80y4O6CU';
     
     // State - Start on ground at Singapore Changi Airport
-    const state = { lon: 103.9915, lat: 1.3644, alt: 15, heading: 90 };
+    const state = { 
+      lon: 103.9915, 
+      lat: 1.3644, 
+      alt: 15, 
+      heading: 90,
+      pitch: 0,
+      roll: 0,
+      speed: 0,
+      throttle: 0
+    };
+    
+    // Aircraft physics - F-16 like
+    const aircraft = {
+      mass: 12000,      // kg
+      wingArea: 28,      // m²
+      maxThrust: 80000, // N
+      maxSpeed: 600,     // m/s
+      stallSpeed: 60     // m/s
+    };
     const keys = {};
     
     // Input
-    document.addEventListener('keydown', e => keys[e.code] = true);
+    document.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      // Throttle controls
+      if (e.code === 'KeyW') state.throttle = Math.min(1, state.throttle + 0.05);
+      if (e.code === 'KeyS') state.throttle = Math.max(0, state.throttle - 0.05);
+    });
     document.addEventListener('keyup', e => keys[e.code] = false);
     
-    // FPS
-    let frameCount = 0, lastFpsTime = performance.now();
-    
-    function update() {
-      const dt = 1/60;
-      const turn = 30 * dt, speed = 50 * dt;
+    // Physics update
+    function updatePhysics(dt) {
+      const turn = 30 * dt;
+      const airDensity = 1.225;
       
-      // Turn
+      // Throttle
+      if (keys['ArrowUp']) state.throttle = Math.min(1, state.throttle + 0.02);
+      if (keys['ArrowDown']) state.throttle = Math.max(0, state.throttle - 0.02);
+      
+      // Calculate forces
+      const thrust = state.throttle * aircraft.maxThrust;
+      const speed = state.speed;
+      
+      // Lift = 0.5 * ρ * v² * S * CL
+      const liftCoeff = 0.1 + state.pitch * 0.1;
+      const lift = 0.5 * airDensity * speed * speed * aircraft.wingArea * liftCoeff;
+      
+      // Drag = 0.5 * ρ * v² * S * CD
+      const dragCoeff = 0.02 + state.throttle * 0.01;
+      const drag = 0.5 * airDensity * speed * speed * aircraft.wingArea * dragCoeff;
+      
+      // Acceleration
+      const acceleration = (thrust - drag) / aircraft.mass;
+      
+      // Update speed
+      state.speed += acceleration * dt;
+      state.speed = Math.max(0, state.speed);
+      
+      // Ground collision
+      if (state.alt < 10 && state.speed < aircraft.stallSpeed) {
+        state.speed = 0;
+        state.alt = 10;
+      }
+      
+      // Position update
+      if (state.speed > 1) {
+        const h = state.heading * Math.PI / 180;
+        const move = state.speed * dt;
+        
+        state.lon += Math.sin(h) * move / 111320;
+        state.lat += Math.cos(h) * move / 111320;
+        
+        // Climb/descent based on pitch
+        if (state.speed > aircraft.stallSpeed) {
+          state.alt += state.pitch * state.speed * dt * 0.01;
+        }
+      }
+      state.alt = Math.max(10, state.alt);
+      
+      // Turn (based on roll)
+      state.heading += state.roll * dt * 20;
+      
+      // Roll & Pitch from controls
+      if (keys['KeyA']) state.roll = Math.max(-30, state.roll - 60 * dt);
+      if (keys['KeyD']) state.roll = Math.min(30, state.roll + 60 * dt);
       if (keys['ArrowLeft']) state.heading -= turn;
       if (keys['ArrowRight']) state.heading += turn;
       
-      // Move
-      if (keys['KeyW']) { state.lon += Math.sin(state.heading*Math.PI/180)*speed/111320; state.lat += Math.cos(state.heading*Math.PI/180)*speed/111320; }
-      if (keys['KeyS']) { state.lon -= Math.sin(state.heading*Math.PI/180)*speed/111320; state.lat -= Math.cos(state.heading*Math.PI/180)*speed/111320; }
+      // Pitch
+      if (keys['ArrowUp']) state.pitch = Math.min(20, state.pitch + 30 * dt);
+      if (keys['ArrowDown']) state.pitch = Math.max(-20, state.pitch - 30 * dt);
       
-      // Alt
-      if (keys['KeyQ']) state.alt += speed;
-      if (keys['KeyE']) state.alt -= speed;
-      state.alt = Math.max(50, state.alt);
+      // Auto-level roll
+      state.roll *= 0.98;
+      state.pitch *= 0.95;
       
       // HUD
       document.getElementById('pos').textContent = state.lon.toFixed(4) + ', ' + state.lat.toFixed(4);
       document.getElementById('hdg').textContent = ((state.heading%360+360)%360).toFixed(0);
       document.getElementById('alt').textContent = state.alt.toFixed(0);
+      document.getElementById('spd').textContent = state.speed.toFixed(0);
+      document.getElementById('thr').textContent = (state.throttle * 100).toFixed(0);
+    }
       
       // FPS
       frameCount++;
@@ -161,12 +235,16 @@
       document.getElementById('loading').classList.add('hidden');
       
       function loop() {
-        update();
+        updatePhysics(1/60);
         
         aircraft.position = Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt);
         aircraft.orientation = Cesium.Transforms.headingPitchRollQuaternion(
           Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
-          new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(state.heading), 0, 0)
+          new Cesium.HeadingPitchRoll(
+            Cesium.Math.toRadians(state.heading),
+            Cesium.Math.toRadians(state.pitch),
+            Cesium.Math.toRadians(state.roll)
+          )
         );
         
         const h = state.heading * Math.PI/180;
