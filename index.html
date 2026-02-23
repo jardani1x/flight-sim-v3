@@ -135,12 +135,36 @@
     async function init() {
       Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
       
+      // Force full page before Cesium loads
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      document.body.style.overflow = 'hidden';
+      
       const viewer = new Cesium.Viewer('cesium-container', {
         terrainProvider: await Cesium.createWorldTerrainAsync(),
         baseLayerPicker: false, geocoder: false, homeButton: false,
         sceneModePicker: false, selectionIndicator: false, timeline: false,
         animation: false, navigationHelpButton: false, fullscreenButton: false,
         infoBox: false, shouldAnimate: false
+      });
+      
+      // Force resize after Cesium loads
+      viewer.resize();
+      document.getElementById('cesium-container').style.width = '100vw';
+      document.getElementById('cesium-container').style.height = '100vh';
+      
+      // Force Cesium canvas to full size
+      const canvas = viewer.scene.canvas;
+      canvas.style.width = '100vw';
+      canvas.style.height = '100vh';
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      // Handle window resize
+      window.addEventListener('resize', () => {
+        viewer.resize();
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
       });
       
       console.log('Viewer created');
