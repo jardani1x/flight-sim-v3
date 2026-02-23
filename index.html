@@ -4,41 +4,154 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Flight Simulator - M0</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { 
       width: 100vw !important; height: 100vh !important; 
-      overflow: hidden !important; background: #000;
+      overflow: hidden !important; background: #000; font-family: monospace;
     }
     #cesium-container { 
       width: 100vw !important; height: 100vh !important; 
       position: fixed !important; top: 0 !important; left: 0 !important;
     }
-    .cesium-viewer, .cesium-widget, .cesium-viewer canvas {
+    .cesium-viewer, .cesium-widget, canvas {
       width: 100vw !important; height: 100vh !important;
     }
     .loading {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: #000; display: flex; align-items: center; justify-content: center;
-      z-index: 9999; color: #0f0; font-size: 24px; font-family: monospace;
+      z-index: 9999; color: #0f0; font-size: 24px;
     }
     .loading.hidden { display: none; }
     .hud {
       position: fixed; top: 20px; left: 20px;
-      background: rgba(0,0,0,0.7); color: #0f0; padding: 15px;
-      border-radius: 8px; font-family: monospace; z-index: 100;
+      background: rgba(0,0,0,0.8); color: #0f0; padding: 15px;
+      border-radius: 8px; z-index: 100; min-width: 180px;
+    }
+    .hud div { margin: 5px 0; }
+    .controls {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); color: #888; padding: 10px 20px;
+      border-radius: 20px; z-index: 100; font-size: 12px;
     }
   </style>
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
 </head>
 <body>
   <div class="loading" id="loading">M0 Loading...</div>
   <div id="cesium-container"></div>
+  
   <div class="hud">
     <div>FPS: <span id="fps">--</span></div>
     <div>POS: <span id="pos">--</span></div>
     <div>HDG: <span id="hdg">--</span>°</div>
+    <div>ALT: <span id="alt">--</span> m</div>
   </div>
-  <script type="module" src="/src/main.ts"></script>
+  
+  <div class="controls">
+    WASD = Move | Arrow = Turn | Q/E = Up/Down
+  </div>
+
+  <script>
+    const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmZTVkZWJkZC1lMDdlLTQyYzMtYWIyNS01YmUzZTc4Y2JmMGIiLCJpZCI6MzkyOTEzLCJpYXQiOjE3NzE3MzAzNjh9.lNWe3qqelAGSjQAMwJv8jrHbdxKFmFYq7UB80y4O6CU';
+    
+    // State
+    const state = { lon: 103.9915, lat: 1.3644, alt: 500, heading: 90 };
+    const keys = {};
+    
+    // Input
+    document.addEventListener('keydown', e => keys[e.code] = true);
+    document.addEventListener('keyup', e => keys[e.code] = false);
+    
+    // FPS
+    let frameCount = 0, lastFpsTime = performance.now();
+    
+    function update() {
+      const dt = 1/60;
+      const turn = 30 * dt, speed = 50 * dt;
+      
+      // Turn
+      if (keys['ArrowLeft']) state.heading -= turn;
+      if (keys['ArrowRight']) state.heading += turn;
+      
+      // Move
+      if (keys['KeyW']) { state.lon += Math.sin(state.heading*Math.PI/180)*speed/111320; state.lat += Math.cos(state.heading*Math.PI/180)*speed/111320; }
+      if (keys['KeyS']) { state.lon -= Math.sin(state.heading*Math.PI/180)*speed/111320; state.lat -= Math.cos(state.heading*Math.PI/180)*speed/111320; }
+      
+      // Alt
+      if (keys['KeyQ']) state.alt += speed;
+      if (keys['KeyE']) state.alt -= speed;
+      state.alt = Math.max(50, state.alt);
+      
+      // HUD
+      document.getElementById('pos').textContent = state.lon.toFixed(4) + ', ' + state.lat.toFixed(4);
+      document.getElementById('hdg').textContent = ((state.heading%360+360)%360).toFixed(0);
+      document.getElementById('alt').textContent = state.alt.toFixed(0);
+      
+      // FPS
+      frameCount++;
+      const now = performance.now();
+      if (now - lastFpsTime >= 1000) {
+        document.getElementById('fps').textContent = frameCount;
+        frameCount = 0;
+        lastFpsTime = now;
+      }
+    }
+    
+    async function init() {
+      Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
+      document.body.style.margin = '0';
+      
+      const viewer = new Cesium.Viewer('cesium-container', {
+        terrainProvider: await Cesium.createWorldTerrainAsync(),
+        baseLayerPicker: false, geocoder: false, homeButton: false,
+        sceneModePicker: false, selectionIndicator: false, timeline: false,
+        animation: false, navigationHelpButton: false, fullscreenButton: false,
+        infoBox: false, shouldAnimate: false
+      });
+      
+      viewer.resize();
+      document.getElementById('cesium-container').style.width = '100vw';
+      document.getElementById('cesium-container').style.height = '100vh';
+      
+      // Aircraft
+      const aircraft = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
+        model: { uri: 'https://cesium.com/public/Sandcastle/SampleData/models/CesiumAir/Cesium_Air.glb', scale: 50 },
+        label: { text: '✈️ F-16', font: '24px sans-serif', fillColor: Cesium.Color.YELLOW, pixelOffset: new Cesium.Cartesian2(0, -60) },
+        point: { pixelSize: 15, color: Cesium.Color.RED }
+      });
+      
+      // Airport
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(103.9915, 1.3644, 0),
+        point: { pixelSize: 12, color: Cesium.Color.CYAN },
+        label: { text: '🛫 Singapore', font: '16px sans-serif' }
+      });
+      
+      document.getElementById('loading').classList.add('hidden');
+      
+      function loop() {
+        update();
+        
+        aircraft.position = Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt);
+        aircraft.orientation = Cesium.Transforms.headingPitchRollQuaternion(
+          Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
+          new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(state.heading), 0, 0)
+        );
+        
+        const h = state.heading * Math.PI/180;
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromDegrees(state.lon - Math.sin(h)*0.02, state.lat - Math.cos(h)*0.02, state.alt + 300),
+          orientation: { heading: Cesium.Math.toRadians(state.heading), pitch: Cesium.Math.toRadians(-20), roll: 0 }
+        });
+        
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+    
+    init();
+  </script>
 </body>
 </html>
