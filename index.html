@@ -47,7 +47,7 @@
   <script>
     const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmZTVkZWJkZC1lMDdlLTQyYzMtYWIyNS01YmUzZTc4Y2JmMGIiLCJpZCI6MzkyOTEzLCJpYXQiOjE3NzE3MzAzNjh9.lNWe3qqelAGSjQAMwJv8jrHbdxKFmFYq7UB80y4O6CU';
     
-    // Flight state
+    // Flight state - Singapore Changi Airport
     const state = {
       lon: 103.9915,
       lat: 1.3644,
@@ -64,7 +64,7 @@
     
     function updateControls(dt) {
       const turnRate = 30 * dt;
-      const moveSpeed = 100 * dt;
+      const moveSpeed = 50 * dt;
       
       // Turn
       if (keys['ArrowLeft']) state.heading -= turnRate;
@@ -85,7 +85,7 @@
       if (keys['KeyE']) state.alt -= moveSpeed;
       state.alt = Math.max(50, state.alt);
       
-      // Speed boost
+      // Speed
       if (keys['Space']) state.speed = state.maxSpeed;
       else state.speed = keys['KeyW'] ? state.maxSpeed * 0.5 : 0;
       
@@ -119,40 +119,62 @@
         infoBox: false, shouldAnimate: false
       });
       
-      // F-16 Aircraft
+      console.log('Viewer created');
+      
+      // F-16 Aircraft - LARGER and MORE VISIBLE
       const aircraft = viewer.entities.add({
-        position: new Cesium.CallbackProperty(() => {
-          return Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt);
-        }, false),
-        orientation: new Cesium.CallbackProperty(() => {
-          return Cesium.Transforms.headingPitchRollQuaternion(
-            Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
-            new Cesium.HeadingPitchRoll(
-              Cesium.Math.toRadians(state.heading),
-              0, 0
-            )
-          );
-        }, false),
+        position: Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
+        orientation: Cesium.Transforms.headingPitchRollQuaternion(
+          Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
+          new Cesium.HeadingPitchRoll(
+            Cesium.Math.toRadians(state.heading),
+            0, 0
+          )
+        ),
         model: {
           uri: 'https://cesium.com/public/Sandcastle/SampleData/models/CesiumAir/Cesium_Air.glb',
-          scale: 15
+          scale: 50  // MUCH LARGER
         },
         label: {
-          text: 'F-16', font: '16px sans-serif', fillColor: Cesium.Color.YELLOW,
-          pixelOffset: new Cesium.Cartesian2(0, -40)
+          text: '✈️ F-16',
+          font: '24px sans-serif',
+          fillColor: Cesium.Color.YELLOW,
+          pixelOffset: new Cesium.Cartesian2(0, -60),
+          showBackground: true,
+          backgroundColor: new Cesium.Color(0, 0, 0, 0.7)
+        },
+        // Add a visible point
+        point: {
+          pixelSize: 20,
+          color: Cesium.Color.RED,
+          outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 2
         }
       });
+      
+      console.log('Aircraft added');
       
       // Airport marker
       viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(103.9915, 1.3644, 0),
-        point: { pixelSize: 12, color: Cesium.Color.CYAN },
-        label: { text: '🛫 Singapore', font: '14px sans-serif' }
+        point: { pixelSize: 20, color: Cesium.Color.CYAN },
+        label: { text: '🛫 Singapore Changi', font: '18px sans-serif' }
+      });
+      
+      // Fly camera to starting position FIRST
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(103.9915, 1.3644, 3000),
+        orientation: {
+          heading: Cesium.Math.toRadians(0),
+          pitch: Cesium.Math.toRadians(-45),
+          roll: 0
+        },
+        duration: 2
       });
       
       document.getElementById('loading').classList.add('hidden');
       
-      // Chase camera
+      // Game loop
       let lastTime = performance.now();
       function gameLoop() {
         const now = performance.now();
@@ -162,16 +184,23 @@
         updateControls(dt);
         updateFPS();
         
-        // Chase camera - behind and above aircraft
+        // Update aircraft position
+        aircraft.position = Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt);
+        aircraft.orientation = Cesium.Transforms.headingPitchRollQuaternion(
+          Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
+          new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(state.heading), 0, 0)
+        );
+        
+        // Chase camera
         const h = state.heading * Math.PI / 180;
         const camLon = state.lon - Math.sin(h) * 0.02;
         const camLat = state.lat - Math.cos(h) * 0.02;
         
         viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(camLon, camLat, state.alt + 200),
+          destination: Cesium.Cartesian3.fromDegrees(camLon, camLat, state.alt + 300),
           orientation: {
             heading: Cesium.Math.toRadians(state.heading),
-            pitch: Cesium.Math.toRadians(-15),
+            pitch: Cesium.Math.toRadians(-20),
             roll: 0
           }
         });
@@ -179,7 +208,11 @@
         requestAnimationFrame(gameLoop);
       }
       
-      gameLoop();
+      // Start after camera fly completes
+      setTimeout(() => {
+        gameLoop();
+      }, 2500);
+      
       console.log('M1: World + Aircraft ready');
     }
     
