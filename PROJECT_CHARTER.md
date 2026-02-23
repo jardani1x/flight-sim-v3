@@ -1,85 +1,27 @@
-# Massive Web Flight Simulator - Project Charter
+# Project Charter - Massive Web Flight Simulator
 
-**Version:** 1.0  
-**Date:** 2026-02-23  
-**Project Manager:** Elon Musk (Lead Developer)
+## Overview
+- **Project:** Web-based flight simulator
+- **Tech:** CesiumJS + TypeScript + Vite
+- **Aircraft:** F-16 (cockpit first)
+- **Platforms:** All (iOS, Android, Desktop)
 
----
+## Milestones
 
-## 1. Project Overview
+| M0 | Repo + Tooling | ✅ Current |
+| M1 | World + Aircraft | |
+| M2 | Physics Core | |
+| M3 | Controls + HUD + Mobile | |
+| M4 | Asset Pipeline + LOD | |
+| M5 | Performance Tuning | |
+| M6 | Weather/Traffic (optional) | |
 
-**Name:** Massive Web Flight Simulator  
-**Type:** Web-based 3D Flight Simulator  
-**Core Functionality:** Browser-based F-16 flight simulator using CesiumJS for geospatial rendering, JSBSim for flight dynamics, and glTF/GLB for aircraft models.
+## Technology Stack
+- CesiumJS (terrain + imagery)
+- glTF/GLB (aircraft models)
+- TypeScript + Vite
 
-**Target Users:** Aviation enthusiasts, gamers, developers
-
----
-
-## 2. Goals
-
-- [ ] Ship runnable F-16 cockpit-first flight simulator in browser
-- [ ] Achieve 60 FPS on desktop, 30+ FPS on mobile
-- [ ] CesiumJS terrain + imagery with 3D Tiles streaming
-- [ ] JSBSim-based FDM for semi-realistic flight physics
-- [ ] Support all platforms: iOS Safari, Android Chrome, Desktop
-
----
-
-## 3. Non-Goals
-
-- Multiplayer (M6 only)
-- Weather systems (M6 only)
-- Study-level realism (semi-realistic target)
-- Native mobile apps (web-only)
-
----
-
-## 4. Risks & Mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| JSBSim WASM unavailable | Medium | High | Fallback to simple aerodynamic model |
-| F-16 GLB model licensing | Medium | Medium | Use open-source or create placeholder |
-| 3D Tiles performance mobile | High | High | Distance-based LOD + tier system |
-| Cesium ion token | Low | High | User provides key |
-
----
-
-## 5. Technology Stack
-
-| Component | Technology |
-|-----------|------------|
-| Rendering | CesiumJS |
-| Aircraft | glTF 2.0 (GLB) |
-| FDM | JSBSim (or fallback) |
-| Language | TypeScript |
-| Build | Vite |
-
----
-
-## 6. Milestones
-
-| Milestone | Description |
-|-----------|-------------|
-| M0 | Repo + Tooling |
-| M1 | World + Aircraft |
-| M2 | Physics Core |
-| M3 | Controls + HUD + Mobile |
-| M4 | Asset Pipeline + LOD |
-| M5 | Performance Tuning |
-| M6 | Weather/Traffic (optional) |
-
----
-
-## 7. Performance Targets
-
-| Tier | FPS | Max Download |
-|------|-----|--------------|
-| Desktop High | 60 | 2-3 GB |
-| Mobile | 30 | 500 MB |
-
----
-
-*This charter is a living document.*
-v2
+## Performance Targets
+- Desktop: 60 FPS
+- Mobile: 30 FPS
+- Max download: 2-3GB
